@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALORES EN JUEGOS - Historial de Pagos</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .mes-header { cursor: pointer; transition: all 0.2s; }
+        .mes-header:hover { background-color: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+    </style>
+</head>
+<body class="text-slate-900">
+
+    <nav class="bg-white border-b border-slate-100 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-black text-xl">A</span>
+                </div>
+                <h1 class="text-sm font-black uppercase tracking-tighter">Asoc<span class="text-slate-400">Manager</span></h1>
+            </div>
+            <div class="flex gap-6">
+                <a href="index.html" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900">Socios</a>
+                <a href="pagos.html" class="text-[10px] font-black uppercase tracking-widest text-slate-900 border-b-2 border-slate-900 pb-1">Pagos</a>
+                <a href="gastos.html" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600">Gastos</a>
+                <a href="balance.html" class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-900 pt-2">Balance</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Evolución de Ingresos</h3>
+                <div class="h-64">
+                    <canvas id="chartPagos"></canvas>
+                </div>
+            </div>
+            <div class="flex flex-col gap-4">
+                <div class="bg-slate-900 p-8 rounded-3xl text-white shadow-xl">
+                    <p class="text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Total Histórico</p>
+                    <h2 id="total-ingresos" class="text-4xl font-black text-emerald-400">0.00€</h2>
+                </div>
+                <div class="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                    <p class="text-[10px] font-black uppercase text-slate-400 mb-1 tracking-widest">Estado de Conexión</p>
+                    <h2 class="text-sm font-black text-emerald-500 uppercase">● Sincronizado</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative">
+            <input type="text" id="buscador-pagos" placeholder="Buscar por socio o mes..." 
+                class="w-full p-4 pl-12 rounded-2xl border border-slate-100 shadow-sm outline-none focus:ring-2 focus:ring-slate-900 bg-white text-sm">
+            <svg class="w-5 h-5 absolute left-4 top-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2"/></svg>
+        </div>
+
+        <div id="contenedor-pagos" class="space-y-4 pb-20">
+            </div>
+    </main>
+
+    <script>
+    const SB_URL = "https://xegikxovbjttailnassr.supabase.co";
+    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZ2lreG92Ymp0dGFpbG5hc3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MDA1OTMsImV4cCI6MjA5MzM3NjU5M30.tufFxLYUJ8wdDsFtWW4wL7Z1w3TMeUw3CRbNkHSp58w";
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+    let todosLosPagos = [];
+    let miGrafico = null;
+    const mesesOrden = { 
+        'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6, 
+        'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12 
+    };
+
+    function getValCron(periodo) {
+        if (!periodo) return 0;
+        const partes = periodo.trim().toLowerCase().split(/\s+/);
+        if (partes.length < 2) return 0;
+        const mes = partes[0];
+        const año = parseInt(partes[1]);
+        return (año * 100) + (mesesOrden[mes] || 0);
+    }
+
+    async function cargarPagos() {
+        const { data, error } = await supabaseClient.from('pagos').select('*');
+        if (error) return console.error(error);
+        todosLosPagos = data;
+        actualizarDashboard(todosLosPagos);
+        renderizarListaAgrupada(todosLosPagos);
+    }
+
+    function actualizarDashboard(datos) {
+        const total = datos.reduce((acc, p) => acc + (Number(p.importe) || 0), 0);
+        document.getElementById('total-ingresos').innerText = total.toLocaleString() + "€";
+
+        const ingresosPorMes = {};
+        datos.forEach(p => {
+            if (!p.periodo) return;
+            const nombreLimpio = p.periodo.trim().toLowerCase();
+            const nombreFormateado = nombreLimpio.charAt(0).toUpperCase() + nombreLimpio.slice(1);
+            ingresosPorMes[nombreFormateado] = (ingresosPorMes[nombreFormateado] || 0) + Number(p.importe);
+        });
+
+        const etiquetas = Object.keys(ingresosPorMes).sort((a, b) => getValCron(a) - getValCron(b));
+        const valores = etiquetas.map(e => ingresosPorMes[e]);
+
+        if (miGrafico) miGrafico.destroy();
+        const ctx = document.getElementById('chartPagos').getContext('2d');
+        miGrafico = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: etiquetas,
+                datasets: [{
+                    data: valores,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#10b981'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { beginAtZero: true, ticks: { font: { size: 10 } } }, 
+                    x: { ticks: { font: { size: 10, weight: 'bold' } }, grid: { display: false } } 
+                }
+            }
+        });
+    }
+
+    function renderizarListaAgrupada(datos) {
+        const contenedor = document.getElementById('contenedor-pagos');
+        const grupos = {};
+
+        datos.forEach(p => {
+            const raw = p.periodo ? p.periodo.trim().toLowerCase() : "sin periodo";
+            const nombreFormateado = raw.charAt(0).toUpperCase() + raw.slice(1);
+            if (!grupos[nombreFormateado]) grupos[nombreFormateado] = [];
+            grupos[nombreFormateado].push(p);
+        });
+
+        const mesesOrdenados = Object.keys(grupos).sort((a, b) => getValCron(b) - getValCron(a));
+
+        contenedor.innerHTML = mesesOrdenados.map((mes, index) => {
+            const totalMes = grupos[mes].reduce((acc, p) => acc + Number(p.importe), 0);
+            const safeId = mes.replace(/\s+/g, '-').toLowerCase();
+            
+            // Si index es 0 (el más reciente), no ponemos la clase 'hidden'
+            const estaCerrado = index === 0 ? '' : 'hidden';
+            const flecha = index === 0 ? '▼' : '▶';
+
+            return `
+                <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div onclick="toggleMes('${safeId}')" class="mes-header px-8 py-5 flex justify-between items-center bg-slate-50/50">
+                        <div class="flex items-center gap-4">
+                            <span id="flecha-${safeId}" class="text-slate-400 text-[10px]">${flecha}</span>
+                            <h3 class="font-black uppercase text-xs tracking-widest text-slate-800">${mes}</h3>
+                            <span class="bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded-full font-bold">${grupos[mes].length} pagos</span>
+                        </div>
+                        <span class="font-black text-slate-900">${totalMes.toFixed(2)}€</span>
+                    </div>
+                    <div id="lista-${safeId}" class="${estaCerrado} overflow-x-auto transition-all">
+                        <table class="w-full text-left">
+                            <tbody class="divide-y divide-slate-50 text-sm">
+                                ${grupos[mes].map(p => `
+                                    <tr class="hover:bg-slate-50/50">
+                                        <td class="px-8 py-4">
+                                            <div class="flex flex-col">
+                                                <span class="font-bold text-slate-800">${p.nombre || 'Socio'}</span>
+                                                <span class="text-[9px] text-slate-400 uppercase">Socio Nº ${p.num_socio || '--'}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-8 py-4 text-right font-black text-emerald-600">${Number(p.importe || 0).toFixed(2)}€</td>
+                                        <td class="px-8 py-4 text-center">
+                                            <span class="text-[9px] font-black text-emerald-500 uppercase bg-emerald-50 px-2 py-1 rounded">Pagado</span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    window.toggleMes = function(safeId) {
+        const el = document.getElementById(`lista-${safeId}`);
+        const flecha = document.getElementById(`flecha-${safeId}`);
+        if (el) {
+            const isHidden = el.classList.toggle('hidden');
+            flecha.innerText = isHidden ? '▶' : '▼';
+        }
+    }
+
+    document.getElementById('buscador-pagos').addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtrados = todosLosPagos.filter(p => 
+            (p.nombre || "").toLowerCase().includes(term) || 
+            (p.periodo || "").toLowerCase().includes(term)
+        );
+        renderizarListaAgrupada(filtrados);
+    });
+
+    document.addEventListener('DOMContentLoaded', cargarPagos);
+    </script>
+</body>
+</html>

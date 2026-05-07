@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VALORES EN JUEGOS - AsocManager</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #fdfdfd; }
+        .font-money { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    </style>
+</head>
+<body class="text-slate-900">
+
+    <nav class="bg-white border-b border-slate-100 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-black text-xl">A</span>
+                </div>
+                <h1 class="text-sm font-black uppercase tracking-tighter">Asoc<span class="text-slate-400">Manager</span></h1>
+            </div>
+            <div class="flex gap-6">
+                <a href="index.html" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Socios</a>
+                <a href="pagos.html" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Pagos</a>
+                <a href="gastos.html" class="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-colors">Gastos</a>
+                <a href="balance.html" class="text-[10px] font-black uppercase tracking-widest text-slate-900 border-b-2 border-slate-900 pb-1">Balance</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto p-8">
+        <header class="mb-10">
+            <h2 class="text-3xl font-black tracking-tighter text-slate-900">Hoja de Balance</h2>
+            <p class="text-slate-500 text-sm italic">Datos consolidados de cuotas y gastos.</p>
+        </header>
+
+        <div id="contenedor-tablas" class="space-y-16">
+            <div class="flex justify-center py-20" id="loader">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SB_URL = "https://xegikxovbjttailnassr.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhlZ2lreG92Ymp0dGFpbG5hc3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc4MDA1OTMsImV4cCI6MjA5MzM3NjU5M30.tufFxLYUJ8wdDsFtWW4wL7Z1w3TMeUw3CRbNkHSp58w";
+        const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
+        const MESES_LISTA = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        async function init() {
+            try {
+                // Obtenemos datos
+                const { data: pagos } = await supabaseClient.from('pagos').select('*').neq('num_socio', 999);
+                const { data: gastos } = await supabaseClient.from('gastos').select('*').eq('estado', 'Pagado');
+
+                document.getElementById('loader')?.remove();
+                const container = document.getElementById('contenedor-tablas');
+                container.innerHTML = "";
+
+                // DETECTAR AÑOS Y ORDENAR (2026 arriba)
+                const añosEncontrados = new Set();
+                pagos.forEach(p => { if(p.periodo) { const a = p.periodo.split(' ')[1]; if(a) añosEncontrados.add(a); }});
+                gastos.forEach(g => { if(g.mes) { const a = g.mes.split(' ')[1]; if(a) añosEncontrados.add(a); }});
+                
+                // Ordenar de mayor a menor para que 2026 salga primero
+                const listaOrdenada = Array.from(añosEncontrados).sort((a, b) => b - a);
+
+                listaOrdenada.forEach(año => {
+                    renderTable(año, pagos, gastos, container);
+                });
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderTable(año, pagos, gastos, container) {
+            let filas = "";
+            let tI = 0, tG = 0;
+
+            MESES_LISTA.forEach(m => {
+                const mesM = m.toLowerCase();
+                const añoM = año.toString();
+
+                const ing = pagos.filter(p => {
+                    const txt = p.periodo?.toLowerCase() || "";
+                    return txt.includes(mesM) && (txt.includes(añoM) || (añoM === "2026" && txt.includes("226")));
+                }).reduce((s, p) => s + Number(p.importe || 0), 0);
+
+                const gas = gastos.filter(g => {
+                    const txt = g.mes?.toLowerCase() || "";
+                    return txt.includes(mesM) && (txt.includes(añoM) || (añoM === "2026" && txt.includes("226")));
+                }).reduce((s, g) => s + Number(g.importe || 0), 0);
+
+                if (ing > 0 || gas > 0) {
+                    tI += ing; tG += gas;
+                    const neto = ing - gas;
+                    filas += `
+                        <tr class="border-b border-slate-50">
+                            <td class="px-6 py-4 font-black text-slate-400 uppercase text-[10px] tracking-widest">${m}</td>
+                            <td class="px-6 py-4 font-bold text-emerald-600 font-money">+${ing.toFixed(2)}€</td>
+                            <td class="px-6 py-4 font-bold text-rose-500 font-money">-${gas.toFixed(2)}€</td>
+                            <td class="px-6 py-4 text-right font-black ${neto >= 0 ? 'text-slate-900' : 'text-rose-600'} font-money">${neto.toFixed(2)}€</td>
+                        </tr>`;
+                }
+            });
+
+            container.innerHTML += `
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-slate-50 px-8 py-5 border-b border-slate-200 flex justify-between items-center">
+                        <h3 class="text-xl font-black text-slate-800">EJERCICIO ${año}</h3>
+                    </div>
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-[9px] uppercase font-black text-slate-300 border-b border-slate-50">
+                                <th class="px-6 py-4">Mes</th><th class="px-6 py-4">Ingresos</th><th class="px-6 py-4">Gastos</th><th class="px-6 py-4 text-right">Neto</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filas}</tbody>
+                        <tfoot class="bg-slate-900 text-white font-black">
+                            <tr>
+                                <td class="px-6 py-6 text-[10px] uppercase">Total ${año}</td>
+                                <td class="px-6 py-6 text-emerald-400 font-money">+${tI.toFixed(2)}€</td>
+                                <td class="px-6 py-6 text-rose-400 font-money">-${tG.toFixed(2)}€</td>
+                                <td class="px-6 py-6 text-right bg-indigo-600 font-money">${(tI - tG).toFixed(2)}€</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>`;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
