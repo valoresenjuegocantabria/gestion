@@ -13,8 +13,6 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
-        .input-disabled { background-color: #f8fafc !important; color: #94a3b8 !important; cursor: not-allowed; border: 1px solid #e2e8f0 !important; }
-        tbody tr:nth-child(even) { background-color: rgba(248, 250, 252, 0.5); }
         .modal-active { display: flex !important; }
         .year-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
         .year-group.active .year-content { max-height: 1000px; transition: max-height 0.5s ease-in; }
@@ -90,7 +88,6 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
-        
         <div class="mb-8 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
             <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Evolución Mensual de Socios (Basado en Pagos)</h3>
             <div class="h-48">
@@ -130,7 +127,7 @@
         </div>
     </main>
 
-    <div id="modalNuevoSocio" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div id="modalNuevoSocio" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="font-black uppercase text-xs tracking-widest text-slate-900">Alta de Nuevo Socio</h2>
@@ -156,7 +153,7 @@
         </div>
     </div>
 
-    <div id="modalPago" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div id="modalPago" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="font-black uppercase text-[10px] tracking-widest text-slate-400">Confirmar Pago</h2>
@@ -179,7 +176,7 @@
         </div>
     </div>
 
-    <div id="modalFicha" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div id="modalFicha" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
             <div class="p-6 border-b flex justify-between items-center">
                 <h2 class="font-black uppercase text-xs tracking-widest text-slate-400">Ficha Socio <span id="ficha-num-titulo" class="text-slate-900"></span></h2>
@@ -228,7 +225,7 @@
                 listaSocios = respSocios.data || [];
                 listaPagos = respPagos.data || [];
                 actualizarStats(respGastos.data || []);
-                actualizarGraficoSocios(listaPagos); // Nueva función
+                actualizarGraficoSocios(listaPagos);
                 generarOpcionesMeses();
                 
                 const btnActivo = document.getElementById('filtro-activo-init');
@@ -236,29 +233,19 @@
             } catch (err) { console.error(err); }
         }
 
-        // --- NUEVA LÓGICA DE GRÁFICO DE SOCIOS ---
         function actualizarGraficoSocios(pagos) {
             const conteoPorMes = {};
-            
             pagos.forEach(p => {
                 if (!p.periodo) return;
-                const periodoLimpio = p.periodo.trim().toLowerCase();
-                // Usamos el nombre formateado para la visual
-                const periodoFormateado = periodoLimpio.charAt(0).toUpperCase() + periodoLimpio.slice(1);
-                
-                if (!conteoPorMes[periodoFormateado]) {
-                    conteoPorMes[periodoFormateado] = new Set();
-                }
-                // Añadimos el número de socio al Set para contar socios ÚNICOS ese mes
-                conteoPorMes[periodoFormateado].add(p.num_socio);
+                const pLimpio = p.periodo.trim().toLowerCase();
+                const pFormateado = pLimpio.charAt(0).toUpperCase() + pLimpio.slice(1);
+                if (!conteoPorMes[pFormateado]) conteoPorMes[pFormateado] = new Set();
+                conteoPorMes[pFormateado].add(p.num_socio);
             });
 
-            // Función para ordenar cronológicamente
             const getValCron = (periodo) => {
                 const partes = periodo.toLowerCase().split(/\s+/);
-                const mes = partes[0];
-                const año = parseInt(partes[1]);
-                return (año * 100) + (mesesOrden[mes] || 0);
+                return (parseInt(partes[1]) * 100) + (mesesOrden[partes[0]] || 0);
             };
 
             const etiquetas = Object.keys(conteoPorMes).sort((a, b) => getValCron(a) - getValCron(b));
@@ -273,91 +260,51 @@
                     datasets: [{
                         label: 'Socios que pagaron',
                         data: valores,
-                        borderColor: '#0f172a', // Slate 900
+                        borderColor: '#0f172a',
                         backgroundColor: 'rgba(15, 23, 42, 0.05)',
                         fill: true,
                         tension: 0.4,
                         borderWidth: 3,
                         pointRadius: 5,
-                        pointBackgroundColor: '#10b981' // Emerald 500
+                        pointBackgroundColor: '#10b981'
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => `Socios activos: ${context.raw}`
-                            }
-                        }
-                    },
-                    scales: { 
-                        y: { 
-                            beginAtZero: true, 
-                            ticks: { stepSize: 1, font: { size: 10 } } 
-                        },
-                        x: { 
-                            ticks: { font: { size: 10, weight: 'bold' } },
-                            grid: { display: false }
-                        }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
 
-        // --- LÓGICA DE EMAILS ---
+        function generarOpcionesMeses() {
+            const select = document.getElementById('pago-periodo');
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const ahora = new Date();
+            select.innerHTML = '';
+            for (let i = -1; i < 2; i++) {
+                let d = new Date(ahora.getFullYear(), ahora.getMonth() + i, 1);
+                let txt = `${meses[d.getMonth()]} ${d.getFullYear()}`;
+                let opt = new Option(txt, txt.toLowerCase());
+                if(i === 0) opt.selected = true;
+                select.add(opt);
+            }
+        }
+
         async function enviarAvisoCuota() {
             const btn = document.getElementById('btn-notificar');
             const originalText = btn.innerHTML;
             const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
             const mesActual = meses[new Date().getMonth()] + " " + new Date().getFullYear();
-
-            if(!confirm(`¿Enviar aviso de cuota de ${mesActual} a Alberto?`)) return;
-
-            btn.innerHTML = "Enviando...";
-            btn.disabled = true;
-
-            const emailParams = {
-                to_name: "Alberto",
-                to_email: "albertoherreria@gmail.com", 
-                mes_actual: mesActual,
-                mensaje: "Se ha procedido a emitir el cobro de la cuota mensual de la asociación Valores en Juego Cantabria."
-            };
-
+            if(!confirm(`¿Enviar aviso de cuota de ${mesActual}?`)) return;
+            btn.innerHTML = "Enviando..."; btn.disabled = true;
             try {
-                await emailjs.send("service_kyboqyj", "template_r6bmf2v", emailParams);
-                alert("✅ Correo enviado con éxito.");
-            } catch (error) {
-                alert("❌ Error al enviar: " + JSON.stringify(error));
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
+                await emailjs.send("service_kyboqyj", "template_r6bmf2v", { to_name: "Alberto", to_email: "albertoherreria@gmail.com", mes_actual: mesActual });
+                alert("✅ Correo enviado.");
+            } catch (error) { alert("❌ Error: " + error); }
+            finally { btn.innerHTML = originalText; btn.disabled = false; }
         }
 
-        async function enviarConfirmacionPago(socio, periodo, importe) {
-            if(!socio.email) return;
-            try {
-                await emailjs.send("service_kyboqyj", "template_skp3ab3", {
-                    nombre_socio: socio.nombre,
-                    email_socio: socio.email,
-                    mes: periodo,
-                    importe: importe + "€"
-                });
-                console.log("Email de confirmación enviado a " + socio.email);
-            } catch (err) {
-                console.error("Error al enviar email automático:", err);
-            }
-        }
-
-        // --- LÓGICA DE TABLA Y ESTADÍSTICAS ---
         function actualizarStats(gastos) {
             const totalIngresos = listaPagos.reduce((acc, p) => acc + (Number(p.importe) || 0), 0);
             const totalGastos = gastos.reduce((acc, g) => acc + (Number(g.importe) || 0), 0);
             const numImpagados = listaSocios.filter(s => s.estado === 'ACTIVO' && !obtenerEstatusPago(s.num_socio).ok).length;
-
             document.getElementById('stat-socios').innerText = listaSocios.filter(s => s.estado === 'ACTIVO').length;
             document.getElementById('stat-impagados').innerText = numImpagados;
             document.getElementById('stat-ingresos').innerText = totalIngresos.toFixed(2) + "€";
@@ -368,8 +315,8 @@
         function obtenerEstatusPago(numSocio) {
             const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
             const ahora = new Date();
-            const periodoActual = `${meses[ahora.getMonth()]} ${ahora.getFullYear()}`.toLowerCase().trim();
-            const pagado = listaPagos.some(p => String(p.periodo).toLowerCase().trim() === periodoActual && p.num_socio === numSocio);
+            const pActual = `${meses[ahora.getMonth()]} ${ahora.getFullYear()}`.toLowerCase();
+            const pagado = listaPagos.some(p => p.periodo.toLowerCase().trim() === pActual && p.num_socio === numSocio);
             return pagado ? { ok: true, color: 'bg-emerald-600', texto: 'PAGADO' } : { ok: false, color: 'bg-rose-600', texto: 'PENDIENTE' };
         }
 
@@ -396,120 +343,54 @@
             }).join('');
         }
 
-        // --- MANEJO DE FORMULARIOS Y MODALES ---
-        document.getElementById('formRegistrarPago').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-confirmar-pago');
-            const numSocio = parseInt(document.getElementById('pago-num-socio').value);
-            const periodo = document.getElementById('pago-periodo').value;
-            const importe = document.getElementById('pago-importe').value;
-            const notificar = document.getElementById('pago-notificar').checked;
-
-            btn.disabled = true;
-            btn.innerText = "...";
-
-            const p = { num_socio: numSocio, nombre: document.getElementById('pago-socio-nombre').innerText, periodo: periodo, importe: parseFloat(importe) };
-            const { error } = await supabaseClient.from('pagos').insert([p]);
-            
-            if(!error) {
-                if(notificar) {
-                    const socio = listaSocios.find(s => s.num_socio === numSocio);
-                    if(socio) enviarConfirmacionPago(socio, periodo, importe);
-                }
-                cerrarModal('modalPago');
-                await inicializarApp();
-            }
-            btn.disabled = false;
-            btn.innerText = "Confirmar";
-        });
-
-        document.getElementById('formNuevoSocio').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const socioData = {
-                num_socio: parseInt(document.getElementById('nuevo-num-socio').value),
-                nombre: document.getElementById('nuevo-nombre').value,
-                apellidos: document.getElementById('nuevo-apellidos').value,
-                cargo: document.getElementById('nuevo-cargo').value || 'Socio Colaborador',
-                telefono: document.getElementById('nuevo-telefono').value,
-                email: document.getElementById('nuevo-email').value,
-                direccion: document.getElementById('nuevo-direccion').value,
-                estado: 'ACTIVO'
-            };
-            try {
-                const { data: nSocio, error: eSocio } = await supabaseClient.from('socios').insert([socioData]).select().single();
-                if (eSocio) throw eSocio;
-                await supabaseClient.from('datos_privados').insert([{ id: nSocio.id, dni: document.getElementById('nuevo-dni').value, iban: document.getElementById('nuevo-iban').value }]);
-                cerrarModal('modalNuevoSocio');
-                document.getElementById('formNuevoSocio').reset();
-                await inicializarApp();
-            } catch (err) { alert("Error: " + err.message); }
-        });
-
-        async function abrirFichaSocio(id) {
-            const s = listaSocios.find(x => x.id === id);
-            document.getElementById('edit-id-interno').value = s.id;
-            document.getElementById('edit-nombre').value = s.nombre;
-            document.getElementById('edit-estado').value = s.estado;
-            document.getElementById('ficha-num-titulo').innerText = `| Nº ${s.num_socio}`;
-            const { data: historial } = await supabaseClient.from('pagos').select('*').eq('num_socio', s.num_socio);
-            const container = document.getElementById('historial-pagos-lista');
-            if(!historial || historial.length === 0) {
-                container.innerHTML = '<p class="text-xs text-slate-400">Sin pagos registrados.</p>';
-            } else {
-                const grupos = historial.reduce((acc, p) => {
-                    const año = p.periodo.split(' ')[1] || 'Otros';
-                    if (!acc[año]) acc[año] = [];
-                    acc[año].push(p);
-                    return acc;
-                }, {});
-                container.innerHTML = Object.keys(grupos).sort((a,b)=>b-a).map((año, idx) => `
-                    <div class="year-group ${idx===0?'active':''} border border-slate-100 rounded-xl overflow-hidden">
-                        <button onclick="this.parentElement.classList.toggle('active')" class="w-full flex justify-between bg-slate-50 p-3 text-[10px] font-black uppercase">
-                            Año ${año} <svg class="chevron w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="4"/></svg>
-                        </button>
-                        <div class="year-content bg-white p-2 space-y-1">
-                            ${grupos[año].map(p => `<div class="flex justify-between p-2 text-xs font-bold bg-slate-50 rounded-lg"><span>${p.periodo}</span><span class="text-emerald-600">${p.importe}€</span></div>`).join('')}
-                        </div>
-                    </div>`).join('');
-            }
-            document.getElementById('modalFicha').classList.add('modal-active');
-        }
-
-        // --- UTILIDADES ---
-        function abrirPagoRapido(num, nom) {
-            document.getElementById('pago-num-socio').value = num;
-            document.getElementById('pago-socio-nombre').innerText = nom;
-            document.getElementById('modalPago').classList.add('modal-active');
-        }
-
+        function abrirModalNuevoSocio() { document.getElementById('modalNuevoSocio').classList.add('modal-active'); }
         function cerrarModal(id) { document.getElementById(id).classList.remove('modal-active'); }
+        function abrirPagoRapido(num, nom) { 
+            document.getElementById('pago-num-socio').value = num; 
+            document.getElementById('pago-socio-nombre').innerText = nom; 
+            document.getElementById('modalPago').classList.add('modal-active'); 
+        }
 
         function filtrarEstado(est, el) {
             document.querySelectorAll('.flex.bg-slate-100 button').forEach(b => b.classList.remove('filter-btn-active'));
             if(el) el.classList.add('filter-btn-active');
-            if(est === 'TODOS') renderizarTabla(listaSocios);
-            else renderizarTabla(listaSocios.filter(s => s.estado === est));
+            renderizarTabla(est === 'TODOS' ? listaSocios : listaSocios.filter(s => s.estado === est));
         }
 
         function filtrarPorImpagados(el) {
             document.querySelectorAll('.flex.bg-slate-100 button').forEach(b => b.classList.remove('filter-btn-active'));
             if(el) el.classList.add('filter-btn-active');
-            const impagados = listaSocios.filter(s => s.estado === 'ACTIVO' && !obtenerEstatusPago(s.num_socio).ok);
-            renderizarTabla(impagados);
-        }
-
-        function generarOpcionesMeses() {
-            const s = document.getElementById('pago-periodo');
-            const ms = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const a = new Date();
-            s.innerHTML = ms.map((m, i) => `<option value="${m} ${a.getFullYear()}" ${i===a.getMonth()?'selected':''}>${m} ${a.getFullYear()}</option>`).join('');
+            renderizarTabla(listaSocios.filter(s => s.estado === 'ACTIVO' && !obtenerEstatusPago(s.num_socio).ok));
         }
 
         document.getElementById('buscador').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
-            const filtrados = listaSocios.filter(s => s.nombre.toLowerCase().includes(term) || s.apellidos.toLowerCase().includes(term) || String(s.num_socio).includes(term));
-            renderizarTabla(filtrados);
+            renderizarTabla(listaSocios.filter(s => s.nombre.toLowerCase().includes(term) || s.apellidos.toLowerCase().includes(term) || String(s.num_socio).includes(term)));
         });
+
+        // Eventos de Formulario (Simplificados)
+        document.getElementById('formRegistrarPago').onsubmit = async (e) => {
+            e.preventDefault();
+            const p = { 
+                num_socio: parseInt(document.getElementById('pago-num-socio').value), 
+                periodo: document.getElementById('pago-periodo').value, 
+                importe: parseFloat(document.getElementById('pago-importe').value) 
+            };
+            await supabaseClient.from('pagos').insert([p]);
+            cerrarModal('modalPago'); inicializarApp();
+        };
+
+        document.getElementById('formNuevoSocio').onsubmit = async (e) => {
+            e.preventDefault();
+            const sData = {
+                num_socio: parseInt(document.getElementById('nuevo-num-socio').value),
+                nombre: document.getElementById('nuevo-nombre').value,
+                apellidos: document.getElementById('nuevo-apellidos').value,
+                estado: 'ACTIVO'
+            };
+            await supabaseClient.from('socios').insert([sData]);
+            cerrarModal('modalNuevoSocio'); inicializarApp();
+        };
 
         window.onload = inicializarApp;
     </script>
