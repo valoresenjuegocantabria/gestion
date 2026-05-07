@@ -14,9 +14,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .modal-active { display: flex !important; }
-        .year-content { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
-        .year-group.active .year-content { max-height: 1000px; transition: max-height 0.5s ease-in; }
-        .year-group.active .chevron { transform: rotate(180deg); }
         .filter-btn-active { background-color: white !important; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 0.75rem; }
     </style>
 </head>
@@ -89,7 +86,7 @@
 
     <main class="max-w-7xl mx-auto p-4 md:p-8">
         <div class="mb-8 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-            <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Evolución Mensual de Socios (Basado en Pagos)</h3>
+            <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Actividad de Pagos Mensual</h3>
             <div class="h-48">
                 <canvas id="chartSocios"></canvas>
             </div>
@@ -135,20 +132,50 @@
             </div>
             <div class="p-8 overflow-y-auto custom-scrollbar">
                 <form id="formNuevoSocio" class="grid grid-cols-2 gap-4">
-                    <div><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Socio</label><input type="number" id="nuevo-num-socio" required class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold"></div>
+                    <div>
+                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nº Socio (Asignado)</label>
+                        <input type="number" id="nuevo-num-socio" readonly class="w-full p-3 bg-slate-100 rounded-xl border-none outline-none font-bold text-slate-500 cursor-not-allowed">
+                    </div>
                     <div><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Cargo</label><input type="text" id="nuevo-cargo" value="Socio Colaborador" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
                     <div><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nombre</label><input type="text" id="nuevo-nombre" required class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
                     <div><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Apellidos</label><input type="text" id="nuevo-apellidos" required class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
                     <div class="col-span-2 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 grid grid-cols-2 gap-4">
-                        <div class="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Seguridad (Tabla Privada)</div>
+                        <div class="col-span-2 text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Seguridad</div>
                         <div><label class="text-[9px] font-black text-slate-900 uppercase tracking-widest">DNI / NIE</label><input type="text" id="nuevo-dni" required class="w-full p-3 bg-white rounded-xl border-none outline-none font-bold shadow-sm"></div>
                         <div><label class="text-[9px] font-black text-slate-900 uppercase tracking-widest">IBAN Cuenta</label><input type="text" id="nuevo-iban" class="w-full p-3 bg-white rounded-xl border-none outline-none font-bold shadow-sm"></div>
                     </div>
                     <div><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Teléfono</label><input type="text" id="nuevo-telefono" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
                     <div><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Email</label><input type="email" id="nuevo-email" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
-                    <div class="col-span-2"><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dirección Completa</label><input type="text" id="nuevo-direccion" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
-                    <button type="submit" class="col-span-2 py-4 bg-slate-900 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-800 mt-4">Guardar Registro Maestro</button>
+                    <div class="col-span-2"><label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dirección</label><input type="text" id="nuevo-direccion" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-semibold"></div>
+                    <button type="submit" id="btn-guardar-nuevo" class="col-span-2 py-4 bg-slate-900 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest hover:bg-slate-800 mt-4">Registrar Socio</button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalFicha" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
+        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="font-black uppercase text-xs tracking-widest text-slate-400">Ficha Técnica <span id="ficha-num-titulo" class="text-slate-900"></span></h2>
+                <button onclick="cerrarModal('modalFicha')" class="text-slate-400 hover:text-slate-900 text-2xl">&times;</button>
+            </div>
+            <div class="p-8 overflow-y-auto custom-scrollbar">
+                <form id="formEditarSocio" class="grid grid-cols-2 gap-4 mb-8">
+                    <input type="hidden" id="edit-id-interno">
+                    <div><label class="text-[9px] font-black text-slate-400 uppercase">Nombre</label><input type="text" id="edit-nombre" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold"></div>
+                    <div><label class="text-[9px] font-black text-slate-400 uppercase">Apellidos</label><input type="text" id="edit-apellidos" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold"></div>
+                    <div><label class="text-[9px] font-black text-slate-400 uppercase">Cargo</label><input type="text" id="edit-cargo" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold"></div>
+                    <div><label class="text-[9px] font-black text-slate-400 uppercase">Estado</label>
+                        <select id="edit-estado" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold">
+                            <option value="ACTIVO">ACTIVO</option><option value="BAJA">BAJA</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="col-span-2 py-3 bg-slate-900 text-white font-black rounded-xl uppercase text-[9px]">Guardar Cambios</button>
+                </form>
+                <div class="border-t border-slate-100 pt-6">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">Historial de Pagos</h3>
+                    <div id="historial-pagos-lista" class="space-y-3"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -156,7 +183,7 @@
     <div id="modalPago" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
         <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="font-black uppercase text-[10px] tracking-widest text-slate-400">Confirmar Pago</h2>
+                <h2 class="font-black uppercase text-[10px] tracking-widest text-slate-400">Registrar Pago</h2>
                 <button onclick="cerrarModal('modalPago')" class="text-slate-400 hover:text-slate-900 text-2xl">&times;</button>
             </div>
             <form id="formRegistrarPago" class="space-y-4">
@@ -164,40 +191,11 @@
                 <p id="pago-socio-nombre" class="text-center text-emerald-600 font-black text-lg mb-4"></p>
                 <select id="pago-periodo" class="w-full p-4 bg-slate-50 rounded-xl font-bold text-center border-none outline-none"></select>
                 <input type="number" step="0.01" id="pago-importe" value="20.00" class="w-full p-4 bg-slate-50 rounded-xl font-black text-2xl text-center text-emerald-600 border-none outline-none">
-                <div class="flex items-center gap-2 bg-slate-50 p-3 rounded-xl">
-                    <input type="checkbox" id="pago-notificar" checked class="w-4 h-4 accent-slate-900">
-                    <label for="pago-notificar" class="text-[9px] font-black text-slate-500 uppercase">Enviar email automático</label>
-                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <button type="button" onclick="cerrarModal('modalPago')" class="py-4 bg-slate-100 text-slate-500 font-black rounded-2xl uppercase text-[10px]">Cancelar</button>
-                    <button type="submit" id="btn-confirmar-pago" class="py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase text-[10px]">Confirmar</button>
+                    <button type="submit" class="py-4 bg-emerald-600 text-white font-black rounded-2xl uppercase text-[10px]">Confirmar</button>
                 </div>
             </form>
-        </div>
-    </div>
-
-    <div id="modalFicha" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-50 items-center justify-center p-4">
-        <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl flex flex-col max-h-[90vh]">
-            <div class="p-6 border-b flex justify-between items-center">
-                <h2 class="font-black uppercase text-xs tracking-widest text-slate-400">Ficha Socio <span id="ficha-num-titulo" class="text-slate-900"></span></h2>
-                <button onclick="cerrarModal('modalFicha')" class="text-slate-400 hover:text-slate-900 text-2xl">&times;</button>
-            </div>
-            <div class="p-8 overflow-y-auto custom-scrollbar">
-                <form id="formEditarSocio" class="grid grid-cols-2 gap-4 mb-8">
-                    <input type="hidden" id="edit-id-interno">
-                    <div><label class="text-[9px] font-black text-slate-400 uppercase">Nombre</label><input type="text" id="edit-nombre" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold"></div>
-                    <div><label class="text-[9px] font-black text-slate-400 uppercase">Estado</label>
-                        <select id="edit-estado" class="w-full p-3 bg-slate-50 rounded-xl border-none outline-none font-bold">
-                            <option value="ACTIVO">ACTIVO</option><option value="BAJA">BAJA</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="col-span-2 py-3 bg-slate-900 text-white font-black rounded-xl uppercase text-[9px]">Actualizar Socio</button>
-                </form>
-                <div class="border-t border-slate-100 pt-6">
-                    <h3 class="text-[10px] font-black text-slate-400 uppercase mb-4">Historial de Pagos Anualizado</h3>
-                    <div id="historial-pagos-lista" class="space-y-3"></div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -210,11 +208,6 @@
         let listaPagos = [];
         let miGraficoSocios = null;
 
-        const mesesOrden = { 
-            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6, 
-            'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12 
-        };
-
         async function inicializarApp() {
             try {
                 const [respSocios, respPagos, respGastos] = await Promise.all([
@@ -224,87 +217,20 @@
                 ]);
                 listaSocios = respSocios.data || [];
                 listaPagos = respPagos.data || [];
+                
                 actualizarStats(respGastos.data || []);
                 actualizarGraficoSocios(listaPagos);
                 generarOpcionesMeses();
-                
-                const btnActivo = document.getElementById('filtro-activo-init');
-                filtrarEstado('ACTIVO', btnActivo);
-            } catch (err) { console.error(err); }
+                filtrarEstado('ACTIVO', document.getElementById('filtro-activo-init'));
+            } catch (err) { console.error("Error inicializando:", err); }
         }
 
-        function actualizarGraficoSocios(pagos) {
-            const conteoPorMes = {};
-            pagos.forEach(p => {
-                if (!p.periodo) return;
-                const pLimpio = p.periodo.trim().toLowerCase();
-                const pFormateado = pLimpio.charAt(0).toUpperCase() + pLimpio.slice(1);
-                if (!conteoPorMes[pFormateado]) conteoPorMes[pFormateado] = new Set();
-                conteoPorMes[pFormateado].add(p.num_socio);
-            });
-
-            const getValCron = (periodo) => {
-                const partes = periodo.toLowerCase().split(/\s+/);
-                return (parseInt(partes[1]) * 100) + (mesesOrden[partes[0]] || 0);
-            };
-
-            const etiquetas = Object.keys(conteoPorMes).sort((a, b) => getValCron(a) - getValCron(b));
-            const valores = etiquetas.map(e => conteoPorMes[e].size);
-
-            if (miGraficoSocios) miGraficoSocios.destroy();
-            const ctx = document.getElementById('chartSocios').getContext('2d');
-            miGraficoSocios = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: etiquetas,
-                    datasets: [{
-                        label: 'Socios que pagaron',
-                        data: valores,
-                        borderColor: '#0f172a',
-                        backgroundColor: 'rgba(15, 23, 42, 0.05)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#10b981'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-        }
-
-        function generarOpcionesMeses() {
-            const select = document.getElementById('pago-periodo');
-            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const ahora = new Date();
-            select.innerHTML = '';
-            for (let i = -1; i < 2; i++) {
-                let d = new Date(ahora.getFullYear(), ahora.getMonth() + i, 1);
-                let txt = `${meses[d.getMonth()]} ${d.getFullYear()}`;
-                let opt = new Option(txt, txt.toLowerCase());
-                if(i === 0) opt.selected = true;
-                select.add(opt);
-            }
-        }
-
-        async function enviarAvisoCuota() {
-            const btn = document.getElementById('btn-notificar');
-            const originalText = btn.innerHTML;
-            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-            const mesActual = meses[new Date().getMonth()] + " " + new Date().getFullYear();
-            if(!confirm(`¿Enviar aviso de cuota de ${mesActual}?`)) return;
-            btn.innerHTML = "Enviando..."; btn.disabled = true;
-            try {
-                await emailjs.send("service_kyboqyj", "template_r6bmf2v", { to_name: "Alberto", to_email: "albertoherreria@gmail.com", mes_actual: mesActual });
-                alert("✅ Correo enviado.");
-            } catch (error) { alert("❌ Error: " + error); }
-            finally { btn.innerHTML = originalText; btn.disabled = false; }
-        }
-
+        // --- LÓGICA DE NEGOCIO ---
         function actualizarStats(gastos) {
             const totalIngresos = listaPagos.reduce((acc, p) => acc + (Number(p.importe) || 0), 0);
             const totalGastos = gastos.reduce((acc, g) => acc + (Number(g.importe) || 0), 0);
             const numImpagados = listaSocios.filter(s => s.estado === 'ACTIVO' && !obtenerEstatusPago(s.num_socio).ok).length;
+            
             document.getElementById('stat-socios').innerText = listaSocios.filter(s => s.estado === 'ACTIVO').length;
             document.getElementById('stat-impagados').innerText = numImpagados;
             document.getElementById('stat-ingresos').innerText = totalIngresos.toFixed(2) + "€";
@@ -320,6 +246,107 @@
             return pagado ? { ok: true, color: 'bg-emerald-600', texto: 'PAGADO' } : { ok: false, color: 'bg-rose-600', texto: 'PENDIENTE' };
         }
 
+        // --- MODALES ---
+        function abrirModalNuevoSocio() { 
+            // FILTRAR PARA EVITAR EL 999 (SISTEMA) AL CALCULAR EL SIGUIENTE NÚMERO
+            const sociosParaCalculo = listaSocios.filter(s => s.num_socio < 999);
+            const ultimoNum = sociosParaCalculo.length > 0 
+                ? Math.max(...sociosParaCalculo.map(s => s.num_socio)) 
+                : 0;
+            
+            document.getElementById('nuevo-num-socio').value = ultimoNum + 1;
+            document.getElementById('modalNuevoSocio').classList.add('modal-active'); 
+        }
+
+        async function abrirFichaSocio(id) {
+            const s = listaSocios.find(x => x.id === id);
+            if(!s) return;
+            
+            document.getElementById('edit-id-interno').value = s.id;
+            document.getElementById('edit-nombre').value = s.nombre;
+            document.getElementById('edit-apellidos').value = s.apellidos;
+            document.getElementById('edit-cargo').value = s.cargo || '';
+            document.getElementById('edit-estado').value = s.estado;
+            document.getElementById('ficha-num-titulo').innerText = `| Nº ${s.num_socio}`;
+
+            const { data: historial } = await supabaseClient.from('pagos').select('*').eq('num_socio', s.num_socio).order('id', {ascending: false});
+            const container = document.getElementById('historial-pagos-lista');
+            container.innerHTML = (historial && historial.length > 0) 
+                ? historial.map(p => `<div class="flex justify-between p-3 text-xs font-bold bg-slate-50 rounded-xl"><span>${p.periodo}</span><span class="text-emerald-600">${p.importe}€</span></div>`).join('')
+                : '<p class="text-xs text-slate-400 text-center py-4">Sin pagos registrados.</p>';
+
+            document.getElementById('modalFicha').classList.add('modal-active');
+        }
+
+        function cerrarModal(id) { document.getElementById(id).classList.remove('modal-active'); }
+
+        function abrirPagoRapido(num, nom) { 
+            document.getElementById('pago-num-socio').value = num; 
+            document.getElementById('pago-socio-nombre').innerText = nom; 
+            document.getElementById('modalPago').classList.add('modal-active'); 
+        }
+
+        // --- FORMULARIOS ---
+        document.getElementById('formNuevoSocio').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-guardar-nuevo');
+            btn.disabled = true; btn.innerText = "Registrando...";
+
+            const sData = {
+                num_socio: parseInt(document.getElementById('nuevo-num-socio').value),
+                nombre: document.getElementById('nuevo-nombre').value,
+                apellidos: document.getElementById('nuevo-apellidos').value,
+                cargo: document.getElementById('nuevo-cargo').value,
+                telefono: document.getElementById('nuevo-telefono').value,
+                email: document.getElementById('nuevo-email').value,
+                direccion: document.getElementById('nuevo-direccion').value,
+                estado: 'ACTIVO'
+            };
+
+            try {
+                const { data: nSocio, error } = await supabaseClient.from('socios').insert([sData]).select().single();
+                if(error) throw error;
+                
+                await supabaseClient.from('datos_privados').insert([{ 
+                    id: nSocio.id, 
+                    dni: document.getElementById('nuevo-dni').value, 
+                    iban: document.getElementById('nuevo-iban').value 
+                }]);
+
+                cerrarModal('modalNuevoSocio');
+                document.getElementById('formNuevoSocio').reset();
+                await inicializarApp();
+            } catch (err) { alert("Error: " + err.message); }
+            finally { btn.disabled = false; btn.innerText = "Registrar Socio"; }
+        };
+
+        document.getElementById('formEditarSocio').onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id-interno').value;
+            const updates = {
+                nombre: document.getElementById('edit-nombre').value,
+                apellidos: document.getElementById('edit-apellidos').value,
+                cargo: document.getElementById('edit-cargo').value,
+                estado: document.getElementById('edit-estado').value
+            };
+            await supabaseClient.from('socios').update(updates).eq('id', id);
+            cerrarModal('modalFicha');
+            inicializarApp();
+        };
+
+        document.getElementById('formRegistrarPago').onsubmit = async (e) => {
+            e.preventDefault();
+            const p = { 
+                num_socio: parseInt(document.getElementById('pago-num-socio').value), 
+                periodo: document.getElementById('pago-periodo').value, 
+                importe: parseFloat(document.getElementById('pago-importe').value) 
+            };
+            await supabaseClient.from('pagos').insert([p]);
+            cerrarModal('modalPago');
+            inicializarApp();
+        };
+
+        // --- INTERFAZ ---
         function renderizarTabla(datos) {
             const tbody = document.getElementById('tabla-socios');
             tbody.innerHTML = datos.map(s => {
@@ -343,14 +370,6 @@
             }).join('');
         }
 
-        function abrirModalNuevoSocio() { document.getElementById('modalNuevoSocio').classList.add('modal-active'); }
-        function cerrarModal(id) { document.getElementById(id).classList.remove('modal-active'); }
-        function abrirPagoRapido(num, nom) { 
-            document.getElementById('pago-num-socio').value = num; 
-            document.getElementById('pago-socio-nombre').innerText = nom; 
-            document.getElementById('modalPago').classList.add('modal-active'); 
-        }
-
         function filtrarEstado(est, el) {
             document.querySelectorAll('.flex.bg-slate-100 button').forEach(b => b.classList.remove('filter-btn-active'));
             if(el) el.classList.add('filter-btn-active');
@@ -363,34 +382,59 @@
             renderizarTabla(listaSocios.filter(s => s.estado === 'ACTIVO' && !obtenerEstatusPago(s.num_socio).ok));
         }
 
-        document.getElementById('buscador').addEventListener('input', (e) => {
+        document.getElementById('buscador').oninput = (e) => {
             const term = e.target.value.toLowerCase();
-            renderizarTabla(listaSocios.filter(s => s.nombre.toLowerCase().includes(term) || s.apellidos.toLowerCase().includes(term) || String(s.num_socio).includes(term)));
-        });
-
-        // Eventos de Formulario (Simplificados)
-        document.getElementById('formRegistrarPago').onsubmit = async (e) => {
-            e.preventDefault();
-            const p = { 
-                num_socio: parseInt(document.getElementById('pago-num-socio').value), 
-                periodo: document.getElementById('pago-periodo').value, 
-                importe: parseFloat(document.getElementById('pago-importe').value) 
-            };
-            await supabaseClient.from('pagos').insert([p]);
-            cerrarModal('modalPago'); inicializarApp();
+            renderizarTabla(listaSocios.filter(s => 
+                s.nombre.toLowerCase().includes(term) || 
+                s.apellidos.toLowerCase().includes(term) || 
+                String(s.num_socio).includes(term)
+            ));
         };
 
-        document.getElementById('formNuevoSocio').onsubmit = async (e) => {
-            e.preventDefault();
-            const sData = {
-                num_socio: parseInt(document.getElementById('nuevo-num-socio').value),
-                nombre: document.getElementById('nuevo-nombre').value,
-                apellidos: document.getElementById('nuevo-apellidos').value,
-                estado: 'ACTIVO'
-            };
-            await supabaseClient.from('socios').insert([sData]);
-            cerrarModal('modalNuevoSocio'); inicializarApp();
-        };
+        function generarOpcionesMeses() {
+            const select = document.getElementById('pago-periodo');
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const ahora = new Date();
+            select.innerHTML = '';
+            for (let i = -1; i < 2; i++) {
+                let d = new Date(ahora.getFullYear(), ahora.getMonth() + i, 1);
+                let txt = `${meses[d.getMonth()]} ${d.getFullYear()}`;
+                let opt = new Option(txt, txt.toLowerCase());
+                if(i === 0) opt.selected = true;
+                select.add(opt);
+            }
+        }
+
+        function actualizarGraficoSocios(pagos) {
+            const conteoPorMes = {};
+            pagos.forEach(p => {
+                if (!p.periodo) return;
+                const pLimpio = p.periodo.trim().toLowerCase();
+                const pFormateado = pLimpio.charAt(0).toUpperCase() + pLimpio.slice(1);
+                if (!conteoPorMes[pFormateado]) conteoPorMes[pFormateado] = new Set();
+                conteoPorMes[pFormateado].add(p.num_socio);
+            });
+            const etiquetas = Object.keys(conteoPorMes).slice(-6);
+            const valores = etiquetas.map(e => conteoPorMes[e].size);
+
+            if (miGraficoSocios) miGraficoSocios.destroy();
+            const ctx = document.getElementById('chartSocios').getContext('2d');
+            miGraficoSocios = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: etiquetas,
+                    datasets: [{
+                        data: valores,
+                        borderColor: '#0f172a',
+                        backgroundColor: 'rgba(15, 23, 42, 0.05)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+        }
 
         window.onload = inicializarApp;
     </script>
